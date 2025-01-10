@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 import requests
-from threading import Timer
+# Import sensor_reader.py for live weather readings
 
 app = Flask(__name__)
 
@@ -44,23 +44,6 @@ def log_weather_to_db(city, weather):
     conn.close()
 
 
-# Update weather data for all cities every 10 minutes
-def update_weather_data():
-    conn = sqlite3.connect(CITIES_DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('SELECT name FROM cities')
-    cities = [row[0] for row in cursor.fetchall()]
-    conn.close()
-
-    for city in cities:
-        weather = fetch_weather_data(city)
-        if "error" not in weather:
-            log_weather_to_db(city, weather)
-
-    # Schedule the next update after 10 minutes
-    Timer(600, update_weather_data).start()
-
-
 # Fetch weather history from the database
 def fetch_weather_history(city):
     conn = sqlite3.connect(WEATHER_DB_PATH)
@@ -75,7 +58,11 @@ def fetch_weather_history(city):
     return rows
 
 
-# Fetch cities matching the search query
+@app.route('/')
+def home():
+    return render_template("index.html")
+
+
 @app.route('/search_cities')
 def search_cities():
     query = request.args.get('q', '').lower()
@@ -87,13 +74,6 @@ def search_cities():
     return jsonify(results)
 
 
-# Home route
-@app.route('/')
-def home():
-    return render_template("index.html")
-
-
-# Fetch weather data for a city
 @app.route('/weather')
 def get_weather():
     city = request.args.get('city')
@@ -103,14 +83,17 @@ def get_weather():
     return jsonify(weather)
 
 
-# Weather history for a city
 @app.route('/history/<city>')
 def history(city):
     history_data = fetch_weather_history(city)
-    return render_template("history.html", city=city, history_data=history_data)
+    return render_template("city_history.html", city=city, history_data=history_data)
+
+
+
+
+
 
 
 if __name__ == "__main__":
-    # Start periodic weather updates
-    update_weather_data()
+      # Initialize sensor database
     app.run(host="0.0.0.0", port=5000, debug=True)

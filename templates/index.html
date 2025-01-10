@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather Station</title>
     <style>
         body {
@@ -10,118 +11,146 @@
             padding: 0;
             background: linear-gradient(135deg, #1e3c72, #2a5298);
             color: #fff;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
             text-align: center;
         }
-        h1 {
-            font-size: 3rem;
-            color: #fff;
-            margin-bottom: 10px;
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
         }
-        h2 {
-            font-size: 1.5rem;
-            color: #dce3f2;
+        h1 {
+            font-size: 2.5rem;
             margin-bottom: 20px;
         }
+        button {
+            padding: 15px 20px;
+            font-size: 1rem;
+            margin: 10px;
+            background-color: #0288d1;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0277bd;
+        }
+        .section {
+            margin-top: 30px;
+            display: none;
+        }
+        .weather-card {
+            background: #fff;
+            color: #333;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
         .search-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 30px;
-            position: relative;
+            margin: 20px 0;
         }
         .search-box {
-            width: 50%;
+            width: 70%;
             padding: 15px;
-            font-size: 16px;
-            border: none;
+            font-size: 1rem;
             border-radius: 5px 0 0 5px;
+            border: none;
         }
         .search-button {
-            padding: 15px 20px;
-            font-size: 16px;
-            color: white;
+            padding: 15px;
+            font-size: 1rem;
             background-color: #0288d1;
             border: none;
             border-radius: 0 5px 5px 0;
+            color: white;
             cursor: pointer;
         }
         .search-button:hover {
             background-color: #0277bd;
         }
         .dropdown {
-            position: absolute;
-            top: 55px;
-            width: 50%;
-            background: #fff;
-            color: #333;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            max-height: 150px;
-            overflow-y: auto;
-            display: none;
+            position: relative;
+            margin-top: 10px;
         }
         .dropdown-item {
             padding: 10px;
+            background: white;
+            color: #333;
             cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 5px;
         }
         .dropdown-item:hover {
-            background-color: #f1f1f1;
+            background: #f1f1f1;
         }
-        .weather-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-        }
-        .weather-card {
-            width: 300px;
-            padding: 20px;
-            background-color: #fff;
-            color: #333;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            text-align: center;
-        }
-        .weather-card h3 {
-            margin: 0 0 10px;
-            color: #0288d1;
-        }
-        button {
-            padding: 10px 15px;
-            font-size: 14px;
-            color: white;
+        a.back-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
             background-color: #0288d1;
-            border: none;
+            color: white;
+            text-decoration: none;
             border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
+            display: inline-block;
         }
-        button:hover {
+        a.back-btn:hover {
             background-color: #0277bd;
-        }
-        .error {
-            color: red;
-            font-weight: bold;
         }
     </style>
     <script>
+        // Fetch live weather from the BME280 sensor
+        function fetchLiveWeather() {
+            document.getElementById('live-weather-section').style.display = 'block';
+            document.getElementById('search-section').style.display = 'none';
+
+            fetch('/live_weather')
+                .then(response => response.json())
+                .then(data => {
+                    const liveWeatherDiv = document.getElementById('live-weather');
+                    if (data.error) {
+                        liveWeatherDiv.innerHTML = `<p class="error">${data.error}</p>`;
+                    } else {
+                        liveWeatherDiv.innerHTML = `
+                            <div class="weather-card">
+                                <h3>Live Location Weather</h3>
+                                <p><strong>Temperature:</strong> ${data.temperature} °C</p>
+                                <p><strong>Humidity:</strong> ${data.humidity} %</p>
+                                <p><strong>Pressure:</strong> ${data.pressure} hPa</p>
+                                <a href="/view_history/sensor" class="back-btn">View Sensor History</a>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('live-weather').innerHTML = `<p class="error">Error fetching live weather: ${error}</p>`;
+                });
+        }
+
+        // Show search section for city-based weather
+        function showSearchSection() {
+            document.getElementById('live-weather-section').style.display = 'none';
+            document.getElementById('search-section').style.display = 'block';
+        }
+
+        // Search cities dynamically
         function searchCities(query) {
-            const dropdown = document.querySelector('.dropdown');
-            if (query.length === 0) {
-                dropdown.style.display = 'none';
-                alert("No cities found. Please enter a query.");
+            if (!query) {
+                document.getElementById('dropdown').innerHTML = '';
                 return;
             }
+
             fetch(`/search_cities?q=${query}`)
                 .then(response => response.json())
                 .then(data => {
+                    const dropdown = document.getElementById('dropdown');
                     dropdown.innerHTML = '';
                     if (data.length === 0) {
-                        alert("No cities found. Please refine your query.");
-                        dropdown.style.display = 'none';
+                        dropdown.innerHTML = `<p class="error">No cities found.</p>`;
                         return;
                     }
                     data.forEach(city => {
@@ -131,35 +160,48 @@
                         item.onclick = () => selectCity(city);
                         dropdown.appendChild(item);
                     });
-                    dropdown.style.display = 'block';
+                })
+                .catch(error => {
+                    document.getElementById('dropdown').innerHTML = `<p class="error">Error fetching cities: ${error}</p>`;
                 });
         }
 
+        // Select a city from the dropdown
         function selectCity(city) {
             document.querySelector('.search-box').value = city;
-            document.querySelector('.dropdown').style.display = 'none';
-            fetchWeather(city);
+            document.getElementById('dropdown').innerHTML = '';
+            searchWeather(city);
         }
 
-        function fetchWeather(city) {
-            fetch(`/weather?city=${city}`)
+        // Fetch weather data for a city
+        function searchWeather(city = null) {
+            const cityName = city || document.querySelector('.search-box').value;
+            if (!cityName) {
+                alert('Please enter a city name.');
+                return;
+            }
+
+            fetch(`/weather?city=${cityName}`)
                 .then(response => response.json())
                 .then(data => {
-                    const weatherContainer = document.querySelector('.weather-container');
+                    const cityWeatherDiv = document.getElementById('city-weather');
                     if (data.error) {
-                        weatherContainer.innerHTML = `<p class="error">${data.error}</p>`;
+                        cityWeatherDiv.innerHTML = `<p class="error">${data.error}</p>`;
                     } else {
-                        weatherContainer.innerHTML = `
+                        cityWeatherDiv.innerHTML = `
                             <div class="weather-card">
-                                <h3>${data.city}</h3>
+                                <h3>Weather for ${data.city}</h3>
                                 <p><strong>Temperature:</strong> ${data.temperature} °C</p>
-                                <p><strong>Humidity:</strong> ${data.humidity}%</p>
-                                <p><strong>Weather:</strong> ${data.description}</p>
+                                <p><strong>Humidity:</strong> ${data.humidity} %</p>
+                                <p><strong>Description:</strong> ${data.description}</p>
                                 <p><strong>Wind Speed:</strong> ${data.wind_speed} m/s</p>
-                                <a href="/history/${data.city}"><button>View Weather History</button></a>
+                                <a href="/history/${data.city}" class="back-btn">View City History</a>
                             </div>
                         `;
                     }
+                })
+                .catch(error => {
+                    document.getElementById('city-weather').innerHTML = `<p class="error">Error fetching weather: ${error}</p>`;
                 });
         }
     </script>
@@ -167,14 +209,26 @@
 <body>
     <div class="container">
         <h1>Weather Station</h1>
-        <h2>Search Your City</h2>
-        <div class="search-container">
-            <input type="text" class="search-box" placeholder="Type a city name..." oninput="searchCities(this.value)">
-            <button class="search-button">Search</button>
-            <div class="dropdown"></div>
+        <div>
+            <button onclick="fetchLiveWeather()">Live Location</button>
+            <button onclick="showSearchSection()">Search by a City</button>
         </div>
-        <div class="weather-container">
-            <!-- Weather cards will be dynamically displayed here -->
+
+        <!-- Live Weather Section -->
+        <div id="live-weather-section" class="section">
+            <h2>Live Weather</h2>
+            <div id="live-weather"></div>
+        </div>
+
+        <!-- Search Section -->
+        <div id="search-section" class="section">
+            <h2>Search Weather by City</h2>
+            <div class="search-container">
+                <input type="text" class="search-box" placeholder="Type a city name..." oninput="searchCities(this.value)">
+                <button class="search-button" onclick="searchWeather()">Search</button>
+            </div>
+            <div id="dropdown" class="dropdown"></div>
+            <div id="city-weather"></div>
         </div>
     </div>
 </body>

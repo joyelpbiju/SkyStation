@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Readings History</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin: 20px 0;
+        }
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background: #0288d1;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .back-btn {
+            margin: 20px;
+            padding: 10px 20px;
+            background: #0288d1;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .back-btn:hover {
+            background: #0277bd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sensor Readings History</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Temperature (°C)</th>
+                <th>Pressure (hPa)</th>
+                <th>Humidity (%)</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for reading in readings %}
+                <tr>
+                    <td>{{ reading[0] }}</td>
+                    <td>{{ reading[1] }}</td>
+                    <td>{{ reading[2] }}</td>
+                    <td>{{ reading[3] }}</td>
+                    <td>{{ reading[4] }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/" class="back-btn">Back to Home</a>
+</body>
+</html>
