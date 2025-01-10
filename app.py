@@ -1,13 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 import requests
-# Import sensor_reader.py for live weather readings
+import os
+from sensor_reader import initialize_database, read_sensor_data, save_sensor_data_to_db
 
 app = Flask(__name__)
 
 # Database Paths
 CITIES_DB_PATH = r"C:\Users\Acer\PycharmProjects\weatherstation\cities.db"
 WEATHER_DB_PATH = r"C:\Users\Acer\PycharmProjects\weatherstation\weather_data.db"
+SENSOR_DB_PATH = "sensor_readings.db"
 
 # OpenWeatherMap API settings
 API_KEY = "e5780636d5621aebf17df75fe667b8a7"
@@ -68,7 +70,7 @@ def search_cities():
     query = request.args.get('q', '').lower()
     conn = sqlite3.connect(CITIES_DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('SELECT name FROM cities WHERE name LIKE ?', (f'{query}%',))
+    cursor.execute('SELECT name FROM cities WHERE name LIKE ?', (f'{query}%'))
     results = [row[0] for row in cursor.fetchall()]
     conn.close()
     return jsonify(results)
@@ -89,11 +91,38 @@ def history(city):
     return render_template("city_history.html", city=city, history_data=history_data)
 
 
+@app.route('/live_weather')
+def live_weather():
+    sensor_data = read_sensor_data()
+    if sensor_data["error"]:
+        return jsonify({"error": sensor_data["error"]})
+    else:
+        save_sensor_data_to_db(sensor_data)
+        return jsonify({
+            "temperature": sensor_data["temperature"],
+            "pressure": sensor_data["pressure"],
+            "humidity": sensor_data["humidity"]
+        })
 
 
-
+@app.route('/view_history/sensor')
+def view_sensor_history():
+    try:
+        conn = sqlite3.connect(SENSOR_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, temperature, pressure, humidity, timestamp
+            FROM sensor_readings
+            ORDER BY timestamp DESC
+        ''')
+        rows = cursor.fetchall()
+        conn.close()
+        return render_template('sensor_history.html', readings=rows)
+    except Exception as e:
+        return jsonify({"error": f"Error fetching sensor history: {e}"})
 
 
 if __name__ == "__main__":
-      # Initialize sensor database
+    # Initialize sensor database
+    initialize_database()
     app.run(host="0.0.0.0", port=5000, debug=True)
